@@ -12,6 +12,9 @@ Scene* HelloWorld::createScene()
 
     // add layer as a child to scene
     scene->addChild(layer);
+	
+	scene->getDefaultCamera()->setPosition3D(Vec3(0, 100, -250));
+	scene->getDefaultCamera()->lookAt(Vec3(0, 0, 100), Vec3(0, 1, 0));
 
     // return the scene
     return scene;
@@ -63,14 +66,18 @@ bool HelloWorld::init()
     // add the label as a child to this layer
     this->addChild(label, 1);
 
-    // add "HelloWorld" splash screen"
-    auto sprite = Sprite::create("HelloWorld.png");
+	/*auto s = Director::getInstance()->getWinSize();
+	auto camera = Camera::createPerspective(60, (GLfloat)s.width / s.height, 1, 1000);
 
-    // position the sprite on the center of the screen
-    sprite->setPosition(Vec2(visibleSize.width/2 + origin.x, visibleSize.height/2 + origin.y));
+	camera->setPosition3D(Vec3(0, 100, 100));
+	camera->lookAt(Vec3::ZERO, Vec3(0, 1, 0));
 
-    // add the sprite as a child to this layer
-    this->addChild(sprite, 0);
+	this->addChild(camera);*/
+
+	auto sprite2 = Sprite3D::create("meshes/arena1.c3b");
+	sprite2->setPosition(Vec2::ZERO);
+	sprite2->setScale(0.5f);
+	this->addChild(sprite2, 1);
     
     return true;
 }
