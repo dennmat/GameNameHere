@@ -1,4 +1,7 @@
 [{
 	"sceneconf": "scenes/mainmenu.json",
 	"handle": "main_menu"
+}, {
+	"sceneconf": "scenes/gamescene.json",
+	"handle": "game"
 }]

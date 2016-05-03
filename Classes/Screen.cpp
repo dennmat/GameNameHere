@@ -1,10 +1,11 @@
 #include "Screen.h"
 
+#include "Scenes/MenuScene.h"
+#include "Scenes/GameScene.h"
+
 using namespace gnh;
 
-ScreenManager::ScreenManager() {
-
-}
+ScreenManager::ScreenManager() {}
 
 void ScreenManager::loadScenes() {
 	rapidjson::Document document;
@@ -16,7 +17,9 @@ void ScreenManager::loadScenes() {
 
 	document.Parse(sceneRawData.c_str());
 
+	cocos2d::log("Pre Assert Scenes Array");
 	assert(document.IsArray());
+	cocos2d::log("Post Assert Scenes Array");
 
 	std::string firstKey;
 
@@ -42,6 +45,7 @@ void ScreenManager::exitScene() {
 	Scene& scene = *this->scenes[this->currentSceneKey];
 
 	//TODO: Unload/Unhook Stuff Fool
+	this->screens.empty();
 	this->currentScene = nullptr;
 	this->currentSceneKey = std::string();
 }
@@ -58,16 +62,27 @@ void ScreenManager::changeScene(std::string sceneName) {
 
 	cocos2d::Director* director = cocos2d::Director::getInstance();
 
-	if (director->getRunningScene() != nullptr) {
-		director->replaceScene(this->currentScene->cocosScene);
+	for (auto& screen : this->currentScene->loadedScreens) {
+		screen->load();
+		this->currentScene->cocosScene->addChild(screen->node);
+
+		this->screens.push_back(std::move(screen));
+		screen.reset(nullptr);
 	}
-	else {
+
+	if (director->getRunningScene() != nullptr) {
+		cocos2d::log("Replacing Scene...\n");
+		director->replaceScene(this->currentScene->cocosScene);
+	} else {
+		cocos2d::log("New Scene...\n");
 		director->runWithScene(this->currentScene->cocosScene);
 	}
 }
 
 short ScreenManager::stackScreen(const ScreenPtr screen) {
-	this->screens.push_back(screen);
+	this->screens.push_back(std::move(screen));
+
+	return 1;
 }
 
 std::unique_ptr<Screen> ScreenManager::popScreen() {
@@ -109,7 +124,7 @@ void ScreenManager::handleEvent(cocos2d::Event* event, cocos2d::Touch* touch/*=n
 }
 
 bool ScreenManager::propagateEvent(cocos2d::Event* event, cocos2d::Touch* touch/*=nullptr*/) {
-
+	return true;
 }
 
 void ScreenManager::setupScreen(const ScreenPtr screen) {
@@ -150,13 +165,18 @@ Screen* Screen::LoadScreenFromJSON(rapidjson::Value& value) {
 	if (screenType == "main_menu") {
 		return (Screen*)(new MenuScreen(value));
 	}
+	else if (screenType == "game") {
+		return (Screen*)(new GameScreen(value));
+	}
 	
 	//Screen Type Not Implemented!
 	return nullptr;
 }
 
 void Screen::fromJson(rapidjson::Value& value) {
-	if (!value["positioning"].IsNull()) {
+	auto visibleSize = cocos2d::Director::getInstance()->getVisibleSize();
+
+	if (value.HasMember("positioning")) {
 		std::string _positioning = toLowerCase(value["positioning"].GetString());
 
 		if (_positioning == "block") {
@@ -170,17 +190,17 @@ void Screen::fromJson(rapidjson::Value& value) {
 		}
 	}
 
-	if (!value["position"].IsNull()) {
+	if (value.HasMember("position")) {
 		assert(value["position"].IsArray());
-		this->position.x = value["position"][0].GetInt();
-		this->position.y = value["position"][1].GetInt();
+		this->position.x = visibleSize.width * value["position"][0].GetInt();
+		this->position.y = visibleSize.height - visibleSize.height * value["position"][1].GetInt();
 	}
 
-	if (!value["size"].IsNull()) {
+	if (value.HasMember("size")) {
 		assert(value["size"].IsArray());
 		//Optimize This: Not really needed but this is gross
-		this->size.width = cocos2d::Director::getInstance()->getVisibleSize().width * value["size"][0].GetDouble();
-		this->size.height = cocos2d::Director::getInstance()->getVisibleSize().height * value["size"][1].GetDouble();
+		this->size.width = visibleSize.width * value["size"][0].GetDouble();
+		this->size.height = visibleSize.height * value["size"][1].GetDouble();
 	}
 }
 
@@ -197,6 +217,11 @@ short DialogScreen::load() {
 	this->node = cocos2d::Node::create();
 
 	this->dialogTitleLabel = cocos2d::Label::createWithTTF("Hello World This Is My House", "fonts/Marker Felt.ttf", 24);
+	this->dialogTitleLabel->setPosition(cocos2d::Vec2::ZERO);// this->position);
+	this->dialogTitleLabel->setTextColor(cocos2d::Color4B::WHITE);
+	this->node->addChild(this->dialogTitleLabel);
+
+	return 1;
 }
 
 void DialogScreen::setupListeners() {
@@ -221,8 +246,8 @@ void DialogScreen::onMouseMove(cocos2d::Event* event) {
 
 }
 
-void DialogScreen::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event) {
-
+bool DialogScreen::onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event) {
+	return true;
 }
 
 void DialogScreen::onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event) {
@@ -254,55 +279,10 @@ void DialogScreen::blur() {
 }
 
 short DialogScreen::unload() {
-
+	return 1;
 }
 
 DialogScreen::~DialogScreen() {
-
-}
-
-MenuScreen::MenuScreen() {
-
-}
-
-MenuScreen::MenuScreen(rapidjson::Value& value) {
-	Screen::fromJson(value);
-
-}
-
-short MenuScreen::load() {
-
-}
-
-void MenuScreen::setupListeners() {
-
-}
-
-void MenuScreen::render() {
-
-}
-
-void MenuScreen::update() {
-
-}
-
-void MenuScreen::input(cocos2d::Event* event, cocos2d::Touch* touch /*= nullptr*/) {
-
-}
-
-void MenuScreen::focus() {
-
-}
-
-void MenuScreen::blur() {
-
-}
-
-short MenuScreen::unload() {
-
-}
-
-MenuScreen::~MenuScreen() {
 
 }
 
@@ -319,12 +299,19 @@ void Scene::loadSceneFromConf() {
 
 	this->sceneName = this->loadedJson["handle"].GetString();
 
-	assert(this->loadedJson["screens"].IsArray());
-	rapidjson::Value& screens = this->loadedJson["screens"];
+	assert(this->loadedJson["default_screens"].IsArray());
+	rapidjson::Value& screens = this->loadedJson["default_screens"];
+
+	this->loadedScreens.clear();
 
 	for (rapidjson::SizeType i = 0; i < screens.Size(); i++) {
-		std::unique_ptr<Screen> screen = std::make_unique<Screen>(Screen::LoadScreenFromJSON(screens[i]));
-		this->loadedScreens.push_back(screen);
+		std::unique_ptr<Screen> screen{ std::move(Screen::LoadScreenFromJSON(screens[i])) };
+
+		if (screen == nullptr) {
+			continue;
+		}
+
+		this->loadedScreens.push_back(std::move(screen));
 	}
 
 	this->cocosScene = cocos2d::Scene::create();

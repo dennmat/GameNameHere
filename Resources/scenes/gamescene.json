@@ -1,0 +1,9 @@
+{
+	"handle": "game",
+	"default_screens": [{
+		"screen_type": "game",
+		"positioning": "block",
+		"position": [0, 0],
+		"size": [1.0, 1.0]
+	}]
+}

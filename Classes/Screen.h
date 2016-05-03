@@ -15,7 +15,7 @@
 #include <cstdint>
 
 namespace gnh {
-	
+
 	class Screen {
 	public:
 		enum class PositionTypes : std::uint8_t {FIXED, OVERLAY, BLOCK};
@@ -39,44 +39,23 @@ namespace gnh {
 
 		cocos2d::Node* node = nullptr;
 
-		virtual short load();
+		virtual short load() = 0;
 
-		virtual void setupListeners();
+		virtual void setupListeners() = 0;
 
-		virtual void render()=0;
-		virtual void update();
-		virtual void input(cocos2d::Event* event, cocos2d::Touch* touch=nullptr);
+		virtual void render() = 0;
+		virtual void update() = 0;
+		virtual void input(cocos2d::Event* event, cocos2d::Touch* touch = nullptr) = 0;
 
-		virtual void focus();
-		virtual void blur();
+		virtual void focus() = 0;
+		virtual void blur() = 0;
 
-		virtual short unload();
+		virtual short unload() = 0;
 
 		static Screen* LoadScreenFromJSON(rapidjson::Value& value);
 		void fromJson(rapidjson::Value& value);
 
 		virtual ~Screen(){};
-	};
-
-	class MenuScreen : protected Screen {
-	public:
-		MenuScreen();
-		MenuScreen(rapidjson::Value& value);
-
-		short load();
-
-		void setupListeners();
-
-		void render();
-		void update();
-		void input(cocos2d::Event* event, cocos2d::Touch* touch = nullptr);
-
-		void focus();
-		void blur();
-
-		short unload();
-
-		~MenuScreen();
 	};
 
 	class DialogScreen : protected Screen {
@@ -106,7 +85,7 @@ namespace gnh {
 		void onMouseMove(cocos2d::Event* event);
 
 		//Touch Events
-		void onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event);
+		bool onTouchBegan(cocos2d::Touch* touch, cocos2d::Event* event);
 		void onTouchMoved(cocos2d::Touch* touch, cocos2d::Event* event);
 		void onTouchEnded(cocos2d::Touch* touch, cocos2d::Event* event);
 
@@ -140,6 +119,8 @@ namespace gnh {
 		void unload();
 
 		~Scene() {}
+
+		friend class ScreenManager;
 	};
 
 	class ScreenManager {
@@ -163,9 +144,18 @@ namespace gnh {
 		void unsetupScreen(const ScreenPtr screen);
 
 		void loadScreen(const ScreenPtr screen);
+		
+		ScreenManager();
 
 	public:
-		ScreenManager();
+		ScreenManager(ScreenManager const&) = delete;
+		void operator=(ScreenManager const&) = delete;
+
+		static ScreenManager& getInstance() {
+			static ScreenManager instance;
+
+			return instance;
+		}
 
 		void loadScenes();
 		void changeScene(std::string sceneName);

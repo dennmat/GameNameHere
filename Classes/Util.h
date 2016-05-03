@@ -1,6 +1,6 @@
 #pragma once
-#ifndef __GNH_UTIL_H_
-#define __GNH_UTIL_H_
+#ifndef _GNH__UTIL_H_
+#define _GNH__UTIL_H_
 
 #include "cocos2d.h"
 
@@ -9,10 +9,11 @@
 #include <streambuf>
 #include <algorithm>
 
+#define COCOS2D_DEBUG 1
 #define GNH_RESOURCE_PATH(FILENAME) cocos2d::FileUtils::getInstance()->fullPathForFilename(FILENAME)
 
 namespace gnh {
-	void readFileToStr(std::string& filename, std::string& readString) {
+	inline void readFileToStr(std::string& filename, std::string& readString) {
 		std::ifstream t(filename.c_str());
 
 		t.seekg(0, std::ios::end);
@@ -23,9 +24,9 @@ namespace gnh {
 						  std::istreambuf_iterator<char>());
 	}
 
-	std::string toLowerCase(const std::string& input) {
+	inline std::string toLowerCase(const std::string& input) {
 		std::string result;
-		result.reserve(input.size());
+		result.resize(input.size());
 
 		std::transform(input.begin(), input.end(), result.begin(), ::tolower);
 
